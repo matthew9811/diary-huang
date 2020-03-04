@@ -14,7 +14,7 @@ app.use(express.urlencoded({extended: false}));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/public',express.static('public'));
-app.set('view engine','ejs')
+app.set('view engine','ejs');
 app.use('/', indexRouter);
 app.use("/weChat/huang", weChatRouter);
 // catch 404 and forward to error handler
@@ -35,4 +35,5 @@ app.use(function (err, req, res, next) {
         error: err
     });
 });
+app.listen(1000);
 module.exports = app;

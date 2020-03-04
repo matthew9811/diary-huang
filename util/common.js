@@ -1,5 +1,6 @@
 const request = require("request");
-const COS = request('cos-nodejs-sdk-v5');
+const COS = require('cos-nodejs-sdk-v5');
+
 
 let cos = new COS({
     SecretId: 'AKIDiJgneGs24sQlrg4xKSM1tWt1zjEjR43m',
@@ -28,7 +29,7 @@ function putFile(file) {
             Region: 'ap-chengdu',    /* 桶域必须 */
             Key: 'exampleobject',              /* id必须 */
             // StorageClass: 'STANDARD',
-            Body: fs.createReadStream(file), // 上传文件对象
+            Body: file, // 上传文件对象
             onProgress: function (progressData) {
                 console.log(JSON.stringify(progressData));
             }
@@ -42,3 +43,4 @@ function putFile(file) {
 }
 
 module.exports.requestPromise = requestPromise;
+module.exports.putFile = putFile;

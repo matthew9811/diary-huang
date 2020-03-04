@@ -4,6 +4,7 @@ let router = express.Router();
 const mysql = require('../util/mysql');
 const common = require('../util/common');
 const uuid = require('node-uuid');
+const fs = require("fs");
 let pool = mysql.pool;
 /**
  * @api {POST} /login
@@ -52,12 +53,16 @@ router.get("/login", async function (req, resp) {
     });
 });
 
+
 /**
  * @api {GET} /test
  * @apiDescription 用于测试，返回信息没有特定格式
  *
  */
 router.get("/test", async function (req, resp) {
-
+    fs.createReadStream("D:\\浏览器下载\\linux.jpg", function (err, data) {
+        common.putFile(data);
+        resp.send(data);
+    });
 });
 module.exports = router;
