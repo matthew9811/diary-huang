@@ -22,12 +22,12 @@ function requestPromise(options) {
 }
 
 
-function putFile(file) {
+function putFile(file, fileName) {
     return new Promise(((resolve, reject) => {
         cos.putObject({
             Bucket: '47-1256569009', /* 桶名必须 */
             Region: 'ap-chengdu',    /* 桶域必须 */
-            Key: 'exampleobject',              /* id必须 */
+            Key: fileName,              /* id必须 */
             // StorageClass: 'STANDARD',
             Body: file, // 上传文件对象
             onProgress: function (progressData) {
