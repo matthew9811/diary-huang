@@ -24,7 +24,7 @@ module.exports.queryParams = function (sql, params) {
                 } else {
                     resolve(result);
                 }
-                connection.replace();
+                connection.release() ;
             })
         })
     })
@@ -35,7 +35,7 @@ module.exports.query = function (sql) {
     return new Promise((resolve, reject) => {
         pool.getConnection((err, connection) => {
             if (err) {
-                resolve(err);
+                reject(err);
                 return;
             }
             connection.query(sql, (error, result) => {
@@ -45,10 +45,10 @@ module.exports.query = function (sql) {
                     console.info('result: ', result);
                     resolve(JSON.parse(JSON.stringify(result)));
                 }
-                // connection.replace();
-            })
-        })
-    })
+                connection.release();
+            });
+        });
+    });
 };
 
 module.exports.transaction = function (sqlArr) {

@@ -3,6 +3,7 @@ let router = express.Router();
 //导入mysq配置文件
 const mysql = require('../util/mysql');
 const common = require('../util/common');
+const pageHelper = require('../util/pageHelper');
 const uuid = require('node-uuid');
 const fs = require("fs");
 const multer = require('multer');
@@ -11,9 +12,12 @@ let pool = mysql.pool;
 /**
  * @api {POST} /login
  * @apiDescription 获取登录时所需的信息，并完成授权
- * @apiParam jsCode
- * @apiParam appid
- * @apiParam secret
+ * 使用post请求完成对应的文件上传
+ * @apiParam jsCode jscode
+ * @apiParam appid appid
+ * @apiParam secret 密钥
+ * @apiParam nickname 昵称
+ * @apiParam chatHead 头像文件
  */
 router.post("/login", upload.single('chatHead'), async function (req, resp) {
     let body = req.body;
@@ -78,21 +82,17 @@ router.post("/login", upload.single('chatHead'), async function (req, resp) {
 });
 
 
+router.get("/get");
+
 /**
  * @api {POST} /test
  * @apiDescription 用于测试，返回信息没有特定格式
  *
  */
 router.post("/test", upload.any(), async function (req, resp) {
-    let files = req.files;
-    let names = [];
-    for (let f = 0, len = files.length; f < len; f++) {
-        let originalname = uuid() + '.' + files[f].originalname.split('.')[1];
-        names.push(originalname);
-        console.log(common.putFile(files[f].buffer, (originalname)));
-        console.log(files[f].buffer);
-    }
-    // console.log(data.originalname);
-    resp.send(names);
+    // let tableName = "customer";
+    // let pageTotalNum = await pageHelper.pageTotalNum(tableName);
+    // console.log(pageTotalNum[0].total);
+    // await resp.json(pageTotalNum);
 });
 module.exports = router;
