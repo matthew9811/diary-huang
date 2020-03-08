@@ -90,9 +90,9 @@ router.get("/get");
  *
  */
 router.post("/test", upload.any(), async function (req, resp) {
-    // let tableName = "customer";
-    // let pageTotalNum = await pageHelper.pageTotalNum(tableName);
-    // console.log(pageTotalNum[0].total);
-    // await resp.json(pageTotalNum);
+    let tableName = "customer";
+    let pageTotalNum = await pageHelper.totalNum(tableName, '');
+    console.log(pageTotalNum[0].total);
+    await resp.json(pageTotalNum);
 });
 module.exports = router;
