@@ -82,7 +82,112 @@ router.post("/login", upload.single('chatHead'), async function (req, resp) {
 });
 
 
-router.get("/get");
+/**
+ * @description 获取所有已审核的数据
+ * @api {GET} /getDiaryList
+ * @apiParam count 分页大小
+ * @apiParam page 页码 默认为 0
+ */
+router.get("/getDiaryList", (req, resp) => {
+    let param = req.param;
+    let count = param.count;
+    let page = param.page;
+    let totalNum = pageHelper.page(page, count, '*', " food_diary ",
+        " where status = 1");
+    resp.json(totalNum);
+});
+
+/**
+ * @description 搜索日记
+ * @api #{GET} /searchDiary
+ * @apiParam count 分页大小
+ * @apiParam tempTitle 需要搜索的标题
+ *
+ */
+router.get('/searchDiary', (req, resp) => {
+    let param = req.param;
+    let tempTitle = param.tempTitle;
+    let count = param.count;
+    let totalNum = pageHelper.page(page, count, " id, title ", " food_diary ",
+        " where title like %" + tempTitle + "% status = 1");
+    resp.json(totalNum);
+});
+
+/**
+ * @description 上传笔记
+ */
+router.post('/uploadDiary', upload.any(), (req, resp) => {
+
+});
+
+/**
+ * @description 获取审核列表
+ * @api #{GET}
+ * @apiParam count 分页大小
+ * @apiParam page 页码 默认为 0
+ */
+router.get('/auditList', function (req, resp) {
+    let param = req.param;
+    let page = param.page;
+    let count = param.count;
+    resp.json(pageHelper.page(page, count, ' id, title ',
+        ' food_diary ', ' where status = -1 '))
+});
+
+/**
+ * @description 提交审核
+ * @api #{POST} /submitAudit
+ * @apiParam diaryId 文章id
+ * @apiParam status 审核结果 审核通过 1 ；不通过 0；未审核 -1；
+ * @apiParam reviewerOpenId 审核人openId
+ */
+router.post('/submitAudit', async function (req, resp) {
+    let body = req.body;
+    let diaryId = body.diaryId;
+    let status = body.status;
+    let reviewerOpenid = body.reviewerOpenid;
+    //开启事务
+    pool.getConnection((err, connection) => {
+        connection.beginTransaction((err) => {
+            let sql = "UPDATE food_diary " +
+                " SET `status` = " + status +
+                ", reviewer_openid = '" + reviewerOpenid +
+                "', review_time = NOW() " +
+                " WHERE " +
+                " id = " + diaryId;
+            connection.query(sql, (err, result) => {
+                if (result) {
+                    let data = JSON.parse(JSON.stringify(result));
+                    if (data > 0) {
+                        resp.send({code: 200, msg: "审核成功!", data: "审核成功 " + data + "条数据"})
+                    } else {
+                        resp.send({code: 201, msg: "审核失败", data: "无对应数据！"});
+                    }
+                } else {
+                    resp.send({code: 500, msg: "审核失败", data: err});
+                }
+            });
+            connection.commit();
+            connection.release();
+        })
+    });
+});
+
+/**
+ * @description 管理员登录
+ * @api #{GET}
+ * @apiParam pwd 密码
+ */
+router.get('/managerLogin', async (req, resp) => {
+    let query = mysql.query("select count(id) as count from manager where password = '" + req.query.pwd + "'");
+    console.log(query);
+    if (query == 1) {
+        resp.send({code: 200, msg: 'password is true'});
+    } else {
+        resp.send({code: 201, msg: 'password is false'});
+    }
+});
+
 
 /**
  * @api {POST} /test
