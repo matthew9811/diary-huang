@@ -179,15 +179,107 @@ router.post('/submitAudit', async function (req, resp) {
  * @apiParam pwd 密码
  */
 router.get('/managerLogin', async (req, resp) => {
-    let query = mysql.query("select count(id) as count from manager where password = '" + req.query.pwd + "'");
+    let query = await mysql.query("select count(id) as count from manager where password = '" + req.query.pwd + "'");
     console.log(query);
-    if (query == 1) {
+    if (query[0].count == 1) {
         resp.send({code: 200, msg: 'password is true'});
     } else {
         resp.send({code: 201, msg: 'password is false'});
     }
 });
 
+/**
+ * @description 收藏对应的日记
+ * @api /collect
+ * @apiParam openid  收藏人openid
+ * @apiParam diaryId 日记id
+ */
+router.get('/collect', async (req, resp) => {
+    let query = req.query;
+    let openid = query.openid;
+    let diaryId = query.diaryId;
+    let sql = "INSERT collect(openid, diary_id) VALUE( '" + openid + "', " + diaryId + ")";
+    //获取连接
+    pool.getConnection((err, connection) => {
+        //开启事务
+        connection.beginTransaction(err => {
+            //进行判断，确定是否已经收藏
+            connection.query("SELECT count( id ) as count " +
+                " FROM  collect  WHERE openid = '" + openid + "' AND diary_id = " + diaryId,
+                (err, data) => {
+                    if (data) {
+                        let countData = JSON.parse(JSON.stringify(data))[0].count;
+                        if (countData > 0) {
+                            resp.send({code: 202, msg: '收藏失败', data: '不能重复收藏!'});
+                        } else {
+                            //调用sql
+                            connection.query(sql, function (err, result) {
+                                if (err) {
+                                    resp.send(err);
+                                }
+                                let parse = JSON.parse(JSON.stringify(result));
+                                //插入成功
+                                if (parse.affectedRows == 1) {
+                                    resp.send({code: 200, msg: '收藏成功！'})
+                                } else {
+                                    resp.send({code: 500, msg: '数据库操作失败!'})
+                                }
+
+                            });
+                        }
+                    }
+                })
+        });
+        connection.commit();
+        connection.release();
+    });
+});
+
+/**
+ * @description 取消对应的收藏记录
+ * @api /cancelCollect
+ * @apiParam openid  收藏人openid
+ * @apiParam diaryId 日记id
+ */
+router.get('/cancelCollect', async (req, resp) => {
+    let query = req.query;
+    let openid = query.openid;
+    let diaryId = query.diaryId;
+    //从连接池获取数据
+    pool.getConnection((err, conn) => {
+        //开启事务
+        conn.beginTransaction(err => {
+            //进行数据库数据校验，查看是否已收藏
+            conn.query("SELECT COUNT(id) as count FROM collect WHERE openid = '" + openid
+                + "' AND diary_id = " + diaryId, function (err, result) {
+                if (err) {
+                    resp.send({code: 500, msg: '数据库服务器故障!'});
+                } else {
+                    let count = JSON.parse(JSON.stringify(result))[0].count;
+                    //存在数据，进行取消
+                    if (count > 0) {
+                        let sql = "delete from collect where openid = '" + openid
+                            + "' and diary_id = " + diaryId;
+                        conn.query(sql, (err, result) => {
+                            if (result) {
+                                let affectedRows = JSON.parse(JSON.stringify(result)).affectedRows;
+                                if (affectedRows > 0) {
+                                    resp.send({code: 200, msg: '取消成功!'});
+                                } else {
+                                    resp.send({code: 203, msg: '取消失败!', data: '尚未收藏'});
+                                }
+                            }
+                        });
+                    } else {
+                        resp.send({code: 203, msg: '取消失败', data: '尚未收藏!'});
+                    }
+                }
+            });
+        });
+        conn.commit();
+        conn.release();
+    });
+});
 
 /**
  * @api {POST} /test
