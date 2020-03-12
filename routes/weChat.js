@@ -52,7 +52,7 @@ router.post("/login", upload.single('chatHead'), async function (req, resp) {
                             //插入成功
                             if (!err) {
                                 //返回信息
-                                resp.send({
+                                resp.json({
                                     code: 200, msg: '登录成功!', data: {
                                         openid: openid
                                     }
@@ -63,7 +63,7 @@ router.post("/login", upload.single('chatHead'), async function (req, resp) {
                         });
                     } else {
                         //第二次登录，直接返回
-                        resp.send({
+                        resp.json({
                             code: 200, msg: '登录成功!', data: {
                                 openid: openid
                             }
@@ -76,7 +76,7 @@ router.post("/login", upload.single('chatHead'), async function (req, resp) {
             connection.release()
         });
     } else {
-        resp.send({code: 401, msg: "jsCode不可用!"})
+        resp.json({code: 401, msg: "jsCode不可用!"})
     }
 
 });
@@ -159,12 +159,12 @@ router.post('/submitAudit', async function (req, resp) {
                 if (result) {
                     let data = JSON.parse(JSON.stringify(result));
                     if (data > 0) {
-                        resp.send({code: 200, msg: "审核成功!", data: "审核成功 " + data + "条数据"})
+                        resp.json({code: 200, msg: "审核成功!", data: "审核成功 " + data + "条数据"})
                     } else {
-                        resp.send({code: 201, msg: "审核失败", data: "无对应数据！"});
+                        resp.json({code: 201, msg: "审核失败", data: "无对应数据！"});
                     }
                 } else {
-                    resp.send({code: 500, msg: "审核失败", data: err});
+                    resp.json({code: 500, msg: "审核失败", data: err});
                 }
             });
             connection.commit();
@@ -182,9 +182,9 @@ router.get('/managerLogin', async (req, resp) => {
     let query = await mysql.query("select count(id) as count from manager where password = '" + req.query.pwd + "'");
     console.log(query);
     if (query[0].count == 1) {
-        resp.send({code: 200, msg: 'password is true'});
+        resp.json({code: 200, msg: 'password is true'});
     } else {
-        resp.send({code: 201, msg: 'password is false'});
+        resp.json({code: 201, msg: 'password is false'});
     }
 });
 
@@ -210,19 +210,19 @@ router.get('/collect', async (req, resp) => {
                     if (data) {
                         let countData = JSON.parse(JSON.stringify(data))[0].count;
                         if (countData > 0) {
-                            resp.send({code: 202, msg: '收藏失败', data: '不能重复收藏!'});
+                            resp.json({code: 202, msg: '收藏失败', data: '不能重复收藏!'});
                         } else {
                             //调用sql
                             connection.query(sql, function (err, result) {
                                 if (err) {
-                                    resp.send(err);
+                                    resp.json(err);
                                 }
                                 let parse = JSON.parse(JSON.stringify(result));
                                 //插入成功
                                 if (parse.affectedRows == 1) {
-                                    resp.send({code: 200, msg: '收藏成功！'})
+                                    resp.json({code: 200, msg: '收藏成功！'})
                                 } else {
-                                    resp.send({code: 500, msg: '数据库操作失败!'})
+                                    resp.json({code: 500, msg: '数据库操作失败!'})
                                 }
 
                             });
@@ -253,7 +253,7 @@ router.get('/cancelCollect', async (req, resp) => {
             conn.query("SELECT COUNT(id) as count FROM collect WHERE openid = '" + openid
                 + "' AND diary_id = " + diaryId, function (err, result) {
                 if (err) {
-                    resp.send({code: 500, msg: '数据库服务器故障!'});
+                    resp.json({code: 500, msg: '数据库服务器故障!'});
                 } else {
                     let count = JSON.parse(JSON.stringify(result))[0].count;
                     //存在数据，进行取消
@@ -264,14 +264,14 @@ router.get('/cancelCollect', async (req, resp) => {
                             if (result) {
                                 let affectedRows = JSON.parse(JSON.stringify(result)).affectedRows;
                                 if (affectedRows > 0) {
-                                    resp.send({code: 200, msg: '取消成功!'});
+                                    resp.json({code: 200, msg: '取消成功!'});
                                 } else {
-                                    resp.send({code: 203, msg: '取消失败!', data: '尚未收藏'});
+                                    resp.json({code: 203, msg: '取消失败!', data: '尚未收藏'});
                                 }
                             }
                         });
                     } else {
-                        resp.send({code: 203, msg: '取消失败', data: '尚未收藏!'});
+                        resp.json({code: 203, msg: '取消失败', data: '尚未收藏!'});
                     }
                 }
             });
