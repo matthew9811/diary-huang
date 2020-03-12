@@ -122,7 +122,7 @@ router.post('/uploadDiary', upload.any(), (req, resp) => {
 
 /**
  * @description 获取审核列表
- * @api #{GET}
+ * @api #{GET} /auditList
  * @apiParam count 分页大小
  * @apiParam page 页码 默认为 0
  */
@@ -190,7 +190,7 @@ router.get('/managerLogin', async (req, resp) => {
 
 /**
  * @description 收藏对应的日记
- * @api /collect
+ * @api #{GET} /collect
  * @apiParam openid  收藏人openid
  * @apiParam diaryId 日记id
  */
@@ -237,7 +237,7 @@ router.get('/collect', async (req, resp) => {
 
 /**
  * @description 取消对应的收藏记录
- * @api /cancelCollect
+ * @api #{GET} /cancelCollect
  * @apiParam openid  收藏人openid
  * @apiParam diaryId 日记id
  */
