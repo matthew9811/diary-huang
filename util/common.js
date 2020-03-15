@@ -1,6 +1,6 @@
 const request = require("request");
 const COS = require('cos-nodejs-sdk-v5');
-
+const uuid = require('node-uuid');
 
 let cos = new COS({
     SecretId: 'AKIDiJgneGs24sQlrg4xKSM1tWt1zjEjR43m',
@@ -42,5 +42,15 @@ function putFile(file, fileName) {
     }));
 }
 
+function fileKey(file) {
+    return uuid() + '.' + file.originalname.split('.')[1];
+}
+
+function fileName(suffix) {
+    return uuid() + '.' + suffix;
+}
+
 module.exports.requestPromise = requestPromise;
 module.exports.putFile = putFile;
+module.exports.fileKey = fileKey;
+module.exports.fileName = fileName;

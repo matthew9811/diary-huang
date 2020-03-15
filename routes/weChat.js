@@ -4,7 +4,6 @@ let router = express.Router();
 const mysql = require('../util/mysql');
 const common = require('../util/common');
 const pageHelper = require('../util/pageHelper');
-const uuid = require('node-uuid');
 const fs = require("fs");
 const multer = require('multer');
 let upload = multer();
@@ -43,7 +42,7 @@ router.post("/login", upload.single('chatHead'), async function (req, resp) {
                     let parse = JSON.parse(JSON.stringify(data));
                     // 没有数据
                     if (parse[0].num == 0) {
-                        let portraitUrl = uuid() + '.' + chatHead.originalname.split('.')[1];
+                        let portraitUrl = common.fileKey(chatHead);
                         let putFile = common.putFile(chatHead.buffer, portraitUrl);
                         let sql = "insert into customer (openid, nickname, portrait_url) value " +
                             "('" + openid + "','" + nickname + "','" + portraitUrl + "')";
@@ -71,8 +70,9 @@ router.post("/login", upload.single('chatHead'), async function (req, resp) {
                         return;
                     }
                 });
-                connection.commit();
+
             });
+            connection.commit();
             connection.release()
         });
     } else {
@@ -115,8 +115,49 @@ router.get('/searchDiary', (req, resp) => {
 
 /**
  * @description 上传笔记
+ * @api #{POST} /uploadDiary
+ * @apiParam openid
+ * @apiParam title
+ * @ApiParam content 内容
  */
-router.post('/uploadDiary', upload.any(), (req, resp) => {
+router.post('/uploadDiary', async (req, resp) => {
+    let body = req.body;
+    let openid = body.openid;
+    let title = body.title;
+    let content = body.content;
+    let fileKey = common.fileName('html');
+    //上传文件
+    let putFile = await common.putFile(new Buffer(content, 'utf-8'), fileKey);
+
+    //获取连接
+    await pool.getConnection((err, conn) => {
+        // 开启事务`
+        conn.beginTransaction(err => {
+            //插入日记主表数据并获取对应的数据id
+            let sql = "INSERT INTO food_diary(diary_url, openid, title, `status`, create_time) " +
+                "VALUES( \'" + fileKey.concat("\',\'") + openid.concat("\',\'")
+                + title.concat("\', \'2\',NOW()") + " )";
+            conn.query(sql, function (err, data) {
+                let insertId = data.insertId;
+                if (insertId) {
+                    resp.json({code: 200, msg: "保存成功", diaryId: insertId});
+                } else {
+                    resp.json({code: 500, msg: '保存失败'});
+                }
+            });
+            //判断并返回结果
+        });
+        conn.commit();
+        conn.release();
+    });
+});
+
+/**
+ * @description 上传日记对应的图片
+ * @param diaryId 对应日记的id
+ * @param
+ */
+router.post('/uploadDiaryImages', async (req, res)=>{
 
 });
 
@@ -131,14 +172,14 @@ router.get('/auditList', function (req, resp) {
     let page = param.page;
     let count = param.count;
     resp.json(pageHelper.page(page, count, ' id, title ',
-        ' food_diary ', ' where status = -1 '))
+        ' food_diary ', ' where status = 2 '))
 });
 
 /**
  * @description 提交审核
  * @api #{POST} /submitAudit
  * @apiParam diaryId 文章id
- * @apiParam status 审核结果 审核通过 1 ；不通过 0；未审核 -1；
+ * @apiParam status 审核结果 审核通过 1 ；不通过 0；未审核 2；
  * @apiParam reviewerOpenId 审核人openId
  */
 router.post('/submitAudit', async function (req, resp) {
