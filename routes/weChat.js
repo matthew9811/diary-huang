@@ -155,10 +155,37 @@ router.post('/uploadDiary', async (req, resp) => {
 /**
  * @description 上传日记对应的图片
  * @param diaryId 对应日记的id
- * @param
+ * @param images 图片数组
  */
-router.post('/uploadDiaryImages', async (req, res)=>{
-
+router.post('/uploadDiaryImages', upload.any(), async (req, res) => {
+    let diaryId = req.body.diaryId;
+    let files = req.files;
+    let arrObj = new Array(files.length);
+    for (let i = 0, len = files.length; i < len; i++) {
+        let fileKey = common.fileKey(files[i]);
+        arrObj[i] = {num: i, name: fileKey};
+        await common.putFile(files[i].buffer, fileKey);
+    }
+    let sql = "INSERT INTO image(url, sort, diary_id) VALUES ";
+    for (let i = 0, len = arrObj.length; i < len; i++) {
+        sql = sql.concat('(  \"' + arrObj[i].name + '\", ' + arrObj[i].num + ', ' + diaryId + ')');
+        if (i != len - 1) {
+            sql = sql.concat(',');
+        }
+    }
+    pool.getConnection((err, conn) => {
+        conn.beginTransaction(err => {
+            conn.query(sql, (err, data) => {
+                if (!err) {
+                    conn.commit();
+                    conn.release();
+                    res.json({code: 200, msg: '保存成功!'});
+                } else {
+                    res.json({code: 500, msg: '服务器异常!'});
+                }
+            });
+        });
+    });
 });
 
 /**
