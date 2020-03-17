@@ -93,7 +93,6 @@ router.get("/getDiaryList", async (req, resp) => {
     let page = param.page;
     let totalNum = await pageHelper.page(page, count, '*', " food_diary ",
         " where status = 1");
-    console.log(totalNum);
     resp.json(totalNum);
 });
 
