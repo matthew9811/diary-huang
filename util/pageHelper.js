@@ -7,13 +7,17 @@ let pool = mysql.pool;
  * @param limited 限制
  * @returns {Promise}
  */
-function totalNum(tableName, limited) {
+async function totalNum(tableName, limited) {
     return new Promise((resolve, reject) => {
         let sql = 'select count(id) as total from ' + tableName + limited;
         pool.getConnection(function (err, connection) {
             connection.query(sql, (err, total) => {
-                resolve(JSON.parse(JSON.stringify(total)));
-                connection.release();
+                if (err) {
+                    console.log(err);
+                } else {
+                    resolve(JSON.parse(JSON.stringify(total)));
+                    connection.release();
+                }
             })
         })
     })
@@ -40,15 +44,17 @@ function pageSize(totalNum, count) {
  * @param tableName 表名
  * @param suffix 限制条件
  */
-function page(page, count, param,tableName, suffix) {
-    let number = pageSize(totalNum(tableName, suffix), count);
+async function page(page, count, param, tableName, suffix) {
+    let promise = await totalNum(tableName, suffix);
+    let number = await pageSize(promise[0].total, count);
     if (number > 0) {
         page = page + 1;
         let sql = "select " + param + " from " + tableName + suffix
             + " limit " + count + " offset " + page;
-        return {code: 200, msg: "请求成功", data: mysql.query(sql)};
+        let data = await mysql.query(sql);
+        return data;
     }
-    return {code: 203, msg: "暂无数据!"};
+    return new Promise((resolve => resolve({code: 203, msg: "暂无数据!"})));
 }
 
 

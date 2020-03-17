@@ -32,13 +32,12 @@ router.post("/login", upload.single('chatHead'), async function (req, resp) {
     let requestPromise = await common.requestPromise({url: url});
     //如果不为空，进行数据库操作，为空返回错误信息
     if (requestPromise.openid != null && requestPromise.openid != undefined) {
-        await pool.getConnection(function (err, connection) {
+        await pool.getConnection((err, connection) => {
             let openid = requestPromise.openid;
             //开启事务管理
-            connection.beginTransaction(function (err) {
-
+            connection.beginTransaction((error) => {
                 connection.query("select count(*) as num from customer where openid = '" + openid + "'", (err, data) => {
-                    console.log(data || err);
+                    console.log(data || error);
                     let parse = JSON.parse(JSON.stringify(data));
                     // 没有数据
                     if (parse[0].num == 0) {
@@ -88,12 +87,13 @@ router.post("/login", upload.single('chatHead'), async function (req, resp) {
  * @apiParam count 分页大小
  * @apiParam page 页码 默认为 0
  */
-router.get("/getDiaryList", (req, resp) => {
-    let param = req.param;
+router.get("/getDiaryList", async (req, resp) => {
+    let param = req.query;
     let count = param.count;
     let page = param.page;
-    let totalNum = pageHelper.page(page, count, '*', " food_diary ",
+    let totalNum = await pageHelper.page(page, count, '*', " food_diary ",
         " where status = 1");
+    console.log(totalNum);
     resp.json(totalNum);
 });
 
@@ -153,6 +153,7 @@ router.post('/uploadDiary', async (req, resp) => {
 });
 
 /**
+ * @api #{POST} /
  * @description 上传日记对应的图片
  * @param diaryId 对应日记的id
  * @param images 图片数组
@@ -161,20 +162,21 @@ router.post('/uploadDiaryImages', upload.any(), async (req, res) => {
     let diaryId = req.body.diaryId;
     let files = req.files;
     let arrObj = new Array(files.length);
-    for (let i = 0, len = files.length; i < len; i++) {
-        let fileKey = common.fileKey(files[i]);
-        arrObj[i] = {num: i, name: fileKey};
-        await common.putFile(files[i].buffer, fileKey);
-    }
-    let sql = "INSERT INTO image(url, sort, diary_id) VALUES ";
-    for (let i = 0, len = arrObj.length; i < len; i++) {
-        sql = sql.concat('(  \"' + arrObj[i].name + '\", ' + arrObj[i].num + ', ' + diaryId + ')');
-        if (i != len - 1) {
-            sql = sql.concat(',');
-        }
-    }
-    pool.getConnection((err, conn) => {
+
+    await pool.getConnection((err, conn) => {
         conn.beginTransaction(err => {
+            for (let i = 0, len = files.length; i < len; i++) {
+                let fileKey = common.fileKey(files[i]);
+                arrObj[i] = {num: i, name: fileKey};
+                common.putFile(files[i].buffer, fileKey);
+            }
+            let sql = "INSERT INTO image(url, sort, diary_id) VALUES ";
+            for (let i = 0, len = arrObj.length; i < len; i++) {
+                sql = sql.concat('(  \"' + arrObj[i].name + '\", ' + arrObj[i].num + ', ' + diaryId + ')');
+                if (i != len - 1) {
+                    sql = sql.concat(',');
+                }
+            }
             conn.query(sql, (err, data) => {
                 if (!err) {
                     conn.commit();

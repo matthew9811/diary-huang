@@ -14,7 +14,7 @@ function requestPromise(options) {
     return new Promise((resolve, reject) => {
         request(options, (error, response, body) => {
             if (error) {
-                resolve(error);
+                console.log(error);
             }
             resolve(JSON.parse(body));
         });
@@ -43,7 +43,8 @@ function putFile(file, fileName) {
 }
 
 function fileKey(file) {
-    return uuid() + '.' + file.originalname.split('.')[1];
+    let split = file.originalname.split('.');
+    return uuid() + '.' + split[split.length - 1];
 }
 
 function fileName(suffix) {
