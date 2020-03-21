@@ -91,8 +91,10 @@ router.get("/getDiaryList", async (req, resp) => {
     let param = req.query;
     let count = param.count;
     let page = param.page;
-    let totalNum = await pageHelper.page(page, count, '*', " food_diary ",
-        " where status = 1");
+    let totalNum = await pageHelper.page(page, count, 'food_diary.title, food_diary_, count( collect.diary_id ) as collectNum, image.url as cover',
+        " food_diary LEFT JOIN collect ON food_diary.id = collect.diary_id " +
+        "LEFT JOIN image ON food_diary.id = image.diary_id AND image.sort = 0 ",
+        " WHERE food_diary.`status` = 1 GROUP BY food_diary.id, image.url");
     resp.json(totalNum);
 });
 
@@ -169,6 +171,7 @@ router.post('/uploadDiaryImages', upload.any(), async (req, res) => {
                 arrObj[i] = {num: i, name: fileKey};
                 common.putFile(files[i].buffer, fileKey);
             }
+            console.log(arrObj);
             let sql = "INSERT INTO image(url, sort, diary_id) VALUES ";
             for (let i = 0, len = arrObj.length; i < len; i++) {
                 sql = sql.concat('(  \"' + arrObj[i].name + '\", ' + arrObj[i].num + ', ' + diaryId + ')');
