@@ -91,10 +91,12 @@ router.get("/getDiaryList", async (req, resp) => {
     let param = req.query;
     let count = param.count;
     let page = param.page;
-    let totalNum = await pageHelper.page(page, count, 'food_diary.title, food_diary_, count( collect.diary_id ) as collectNum, image.url as cover',
+    let totalNum = await pageHelper.page(page, count, 'food_diary.title, food_diary.id, food_diary.diary_url, ' +
+        'count( collect.diary_id ) as collectNum, image.url as cover, customer.nickname ',
         " food_diary LEFT JOIN collect ON food_diary.id = collect.diary_id " +
-        "LEFT JOIN image ON food_diary.id = image.diary_id AND image.sort = 0 ",
-        " WHERE food_diary.`status` = 1 GROUP BY food_diary.id, image.url");
+        " LEFT JOIN image ON food_diary.id = image.diary_id AND image.sort = 0 " +
+        " LEFT JOIN customer ON customer.openid = food_diary.openid ",
+        " WHERE food_diary.`status` = 1 GROUP BY food_diary.id, image.url, customer.nickname");
     resp.json(totalNum);
 });
 
@@ -102,15 +104,22 @@ router.get("/getDiaryList", async (req, resp) => {
  * @description 搜索日记
  * @api #{GET} /searchDiary
  * @apiParam count 分页大小
+ * @apiParam page 页数
  * @apiParam tempTitle 需要搜索的标题
  *
  */
-router.get('/searchDiary', (req, resp) => {
-    let param = req.param;
+router.get('/searchDiary', async (req, resp) => {
+    let param = req.query;
     let tempTitle = param.tempTitle;
     let count = param.count;
-    let totalNum = pageHelper.page(page, count, " id, title ", " food_diary ",
-        " where title like %" + tempTitle + "% status = 1");
+    let page = param.page;
+    let totalNum = await pageHelper.page(page, count, " food_diary.title, food_diary.id, food_diary.diary_url, " +
+        " count( collect.diary_id ) as collectNum, image.url as cover ",
+        " food_diary LEFT JOIN collect ON food_diary.id = collect.diary_id " +
+        " LEFT JOIN image ON food_diary.id = image.diary_id AND image.sort = 0 " +
+        " LEFT JOIN customer ON customer.openid = food_diary.openid ",
+        " where food_diary.`status` = 1 AND title like '%" + tempTitle + "%' " +
+        " GROUP BY food_diary.id, image.url, customer.nickname ");
     resp.json(totalNum);
 });
 
@@ -351,6 +360,26 @@ router.get('/cancelCollect', async (req, resp) => {
         conn.commit();
         conn.release();
     });
+});
+
+/**
+ * @description 获取用户个人信息
+ * @ApiParam openid
+ */
+router.get('/userMsg', async (req, res)=>{
+    let query = req.query;
+    let openid = query.openid;
+    let promise = mysql.query('SELECT ' +
+        ' id, ' +
+        ' openid, ' +
+        ' nickname, ' +
+        ' portrait_url ' +
+        'FROM ' +
+        ' customer  ' +
+        'WHERE ' +
+        ' openid = "' + openid + '"');
+    //后期看需求更改
+    res.json(promise);
 });
 
 /**
