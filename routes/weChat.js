@@ -79,7 +79,23 @@ router.post("/login", upload.single('chatHead'), async function (req, resp) {
     }
 
 });
-
+/**
+ * @description 获取对应的openid
+ * @api #{POST} /getOpenid
+ * @apiParam jsCode jscode
+ * @apiParam appid appid
+ * @apiParam secret 密钥
+ */
+router.post("/getOpenid", async (req, resp) => {
+    let body = req.body;
+    let jsCode = body.jsCode;
+    let appid = body.appid;
+    let secret = body.secret;
+    let url = "https://api.weixin.qq.com/sns/jscode2session?" +
+        "appid=" + appid + "&secret=" + secret + "&js_code=" + jsCode + "&grant_type=authorization_code";
+    let requestPromise = await common.requestPromise({url: url});
+    resp.json(requestPromise);
+});
 
 /**
  * @description 获取所有已审核的数据
@@ -366,10 +382,10 @@ router.get('/cancelCollect', async (req, resp) => {
  * @description 获取用户个人信息
  * @ApiParam openid
  */
-router.get('/userMsg', async (req, res)=>{
+router.get('/userMsg', async (req, res) => {
     let query = req.query;
     let openid = query.openid;
-    let promise = mysql.query('SELECT ' +
+    let promise = await mysql.query('SELECT ' +
         ' id, ' +
         ' openid, ' +
         ' nickname, ' +
@@ -379,9 +395,93 @@ router.get('/userMsg', async (req, res)=>{
         'WHERE ' +
         ' openid = "' + openid + '"');
     //后期看需求更改
+    promise[0].image = "暂无,如果需要下载图片，则使用";
     res.json(promise);
 });
 
+/**
+ * @description 修改用户信息
+ * @api #{POST} /editMsg
+ * @param id 对应的id
+ * @param  nickname 昵称
+ */
+router.post('/editMsg', async (req, resp) => {
+    let body = req.body;
+    let id = body.id;
+    let nickName = body.nickname;
+    let promise = await mysql.query('UPDATE customer SET nickname= "' + nickName + '" where id = ' + id);
+    if (promise.affectedRows > 0) {
+        resp.json({code: 200, msg: '修改成功'});
+    } else {
+        resp.json({code: 500, msg: '服务器故障', data: promise});
+    }
+});
+/**
+ * @description 获取个人收藏列表
+ * @api #{GET} /getCollectList
+ * @param openid
+ */
+router.get("/getCollectList", async (req, resp) => {
+    let query = req.query;
+    let openid = query.openid;
+    let sql = "SELECT\n" +
+        "\tf.id,\n" +
+        "\tf.title,\n" +
+        "\tf.diary_url,\n" +
+        "\tcus.nickname,\n" +
+        "\tcount( c.diary_id ) AS collectNum, '楚苓大妈的内容' as content \n" +
+        "FROM\n" +
+        "\tcollect AS c\n" +
+        "\tLEFT JOIN food_diary AS f ON c.diary_id = f.id\n" +
+        "\tLEFT JOIN customer AS cus ON f.openid = cus.openid \n" +
+        "WHERE\n" +
+        "\tf.`status` = '1' AND f.openid = '" + openid + "' \n" +
+        "GROUP BY\n" +
+        "\tf.id, cus.nickname";
+    resp.json(await mysql.query(sql));
+});
+/**
+ * @description 小程序个人页获取个人文章列表
+ * @api #{GET} /getPersonDiaryList
+ * @param openid
+ */
+router.get('/getPersonDiaryList', async (req, resp) => {
+    let query = req.query;
+    let openid = query.openid;
+
+    let sql = "SELECT\n" +
+        "\tf.id,\n" +
+        "\tf.title,\n" +
+        "\tf.diary_url,\n" +
+        "\tcus.nickname,\n" +
+        "\tcount( c.diary_id ) AS collectNum, '楚苓大妈的内容' as content \n" +
+        "FROM\n" +
+        "\tcollect AS c\n" +
+        "\tLEFT JOIN food_diary AS f ON c.diary_id = f.id\n" +
+        "\tLEFT JOIN customer AS cus ON f.openid = cus.openid \n" +
+        "WHERE\n" +
+        "\tf.`status` = '1' AND f.openid = '" + openid + "' \n" +
+        "GROUP BY\n" +
+        "\tf.id, cus.nickname";
+    resp.json(await mysql.query(sql));
+});
+/**
+ * @description
+ * @api #{GET} /getDiaryDetail
+ * @param diaryUrl 日记对应的url
+ */
+router.get("/getDiaryDetail", async (req, resp) => {
+    let query = req.query;
+    let diaryUrl = query.diaryUrl;
+    let file = await common.getFile(diaryUrl);
+    if (file.statusCode == 200) {
+        await fs.readFile('./' + diaryUrl, (err, data) => {
+            console.log(data || err);
+            fs.unlink('./' + diaryUrl, err1 => console.log(err1));
+            resp.json({code: 200, msg: '内容校验正常', data: data.toString()});
+        });
+    }
+});
 /**
  * @api {POST} /test
  * @apiDescription 用于测试，返回信息没有特定格式

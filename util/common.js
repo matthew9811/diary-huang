@@ -1,7 +1,7 @@
 const request = require("request");
 const COS = require('cos-nodejs-sdk-v5');
 const uuid = require('node-uuid');
-
+const fs = require('fs');
 let cos = new COS({
     SecretId: 'AKIDiJgneGs24sQlrg4xKSM1tWt1zjEjR43m',
     // 控制文件上传并发数
@@ -42,6 +42,22 @@ function putFile(file, fileName) {
     }));
 }
 
+function getFile(key) {
+    return new Promise((resolve, reject) => {
+        cos.getObject({
+            Bucket: '47-1256569009', /* 桶名必须 */
+            Region: 'ap-chengdu',    /* 桶域必须 */
+            Key: key,              /* 必须 */
+            Output: fs.createWriteStream('./' + key),
+        }, function (err, data) {
+            console.log(err || data);
+            if (!err) {
+                resolve(data);
+            }
+        });
+    })
+}
+
 function fileKey(file) {
     let split = file.originalname.split('.');
     return uuid() + '.' + split[split.length - 1];
@@ -55,3 +71,4 @@ module.exports.requestPromise = requestPromise;
 module.exports.putFile = putFile;
 module.exports.fileKey = fileKey;
 module.exports.fileName = fileName;
+module.exports.getFile = getFile;
