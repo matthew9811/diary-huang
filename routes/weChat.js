@@ -533,6 +533,6 @@ router.post("/uploadHead", upload.any(), async (req, resp) => {
     await common.deleteFile(oldUrl);
     let promise = mysql.query('UPDATE customer SET portrait_url="' + portraitUrl +
         '" WHERE openid = "' + openid + '"');
-    resp.json({code: 200, msg: '修改成功'});
+    resp.json({code: 200, msg: '修改成功', data: portraitUrl});
 });
 module.exports = router;
