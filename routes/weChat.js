@@ -8,6 +8,7 @@ const fs = require("fs");
 const multer = require('multer');
 let upload = multer();
 let pool = mysql.pool;
+
 /**
  * @api {POST} /login
  * @apiDescription 获取登录时所需的信息，并完成授权
@@ -79,6 +80,7 @@ router.post("/login", upload.single('chatHead'), async function (req, resp) {
     }
 
 });
+
 /**
  * @description 获取对应的openid
  * @api #{POST} /getOpenid
@@ -102,18 +104,21 @@ router.post("/getOpenid", async (req, resp) => {
  * @api {GET} /getDiaryList
  * @apiParam count 分页大小
  * @apiParam page 页码 默认为 0
+ * @param openid
  */
 router.get("/getDiaryList", async (req, resp) => {
     let param = req.query;
     let count = param.count;
     let page = param.page;
+    let openid = param.openid;
     let totalNum = await pageHelper.page(page, count, 'food_diary.title, food_diary.id, food_diary.diary_url as diaryUrl,' +
-        ' food_diary.create_time as createTime, ' +
+        ' food_diary.create_time as createTime, isc.num, ' +
         'count( collect.diary_id ) as collectNum, image.url as cover, customer.nickname ',
         " food_diary LEFT JOIN collect ON food_diary.id = collect.diary_id " +
         " LEFT JOIN image ON food_diary.id = image.diary_id AND image.sort = 0 " +
+        " LEFT JOIN (SELECT count(-1) as num FROM collect as c WHERE c.openid = '" + openid + "') as isc on 1 = 1 " +
         " LEFT JOIN customer ON customer.openid = food_diary.openid ",
-        " WHERE food_diary.`status` = 1 GROUP BY food_diary.id, image.url, customer.nickname");
+        " WHERE food_diary.`status` = 1 GROUP BY food_diary.id, image.url, customer.nickname, isc.num ");
     resp.json(totalNum);
 });
 
@@ -123,6 +128,7 @@ router.get("/getDiaryList", async (req, resp) => {
  * @apiParam count 分页大小
  * @apiParam page 页数
  * @apiParam tempTitle 需要搜索的标题
+ * @param openid
  *
  */
 router.get('/searchDiary', async (req, resp) => {
@@ -130,13 +136,15 @@ router.get('/searchDiary', async (req, resp) => {
     let tempTitle = param.tempTitle;
     let count = param.count;
     let page = param.page;
+    let openid = param.openid;
     let totalNum = await pageHelper.page(page, count, " food_diary.title, food_diary.id, food_diary.diary_url as diaryUrl, " +
-        "food_diary.create_time as createTime, count( collect.diary_id ) as collectNum, image.url as cover ",
+        "food_diary.create_time as createTime, count( collect.diary_id ) as collectNum, image.url as cover, isc.num ",
         " food_diary LEFT JOIN collect ON food_diary.id = collect.diary_id " +
         " LEFT JOIN image ON food_diary.id = image.diary_id AND image.sort = 0 " +
+        " LEFT JOIN (SELECT count(-1) as num FROM collect as c WHERE c.openid = '" + openid + "') as isc on 1 = 1 " +
         " LEFT JOIN customer ON customer.openid = food_diary.openid ",
         " where food_diary.`status` = 1 AND title like '%" + tempTitle + "%' " +
-        " GROUP BY food_diary.id, image.url, customer.nickname ");
+        " GROUP BY food_diary.id, image.url, customer.nickname, isc.num  ");
     resp.json(totalNum);
 });
 
@@ -224,11 +232,11 @@ router.post('/uploadDiaryImages', upload.any(), async (req, res) => {
  * @apiParam count 分页大小
  * @apiParam page 页码 默认为 0
  */
-router.get('/auditList', function (req, resp) {
-    let param = req.param;
+router.get('/auditList', async function (req, resp) {
+    let param = req.query;
     let page = param.page;
     let count = param.count;
-    resp.json(pageHelper.page(page, count, ' id, title ',
+    resp.json(await pageHelper.page(page, count, ' id, title ',
         ' food_diary ', ' where status = 2 '))
 });
 
@@ -417,6 +425,7 @@ router.post('/editMsg', async (req, resp) => {
         resp.json({code: 500, msg: '服务器故障', data: promise});
     }
 });
+
 /**
  * @description 获取个人收藏列表
  * @api #{GET} /getCollectList
@@ -439,11 +448,12 @@ router.get("/getCollectList", async (req, resp) => {
         "\tLEFT JOIN customer AS au ON au.openid = c.openid \n" +
         "WHERE\n" +
         "\tf.`status` = '1' \n" +
-        "\tAND au.openid = '" + openid + '"/n' +
+        "\tAND au.openid = '" + openid + "'\n" +
         "GROUP BY\n" +
         "\tf.id"
     resp.json(await mysql.query(sql));
 });
+
 /**
  * @description 小程序个人页获取个人文章列表
  * @api #{GET} /getPersonDiaryList
@@ -470,6 +480,7 @@ router.get('/getPersonDiaryList', async (req, resp) => {
         '\tf.id';
     resp.json(await mysql.query(sql));
 });
+
 /**
  * @description
  * @api #{GET} /getDiaryDetail
@@ -504,6 +515,7 @@ router.get("/getDiaryDetail", async (req, resp) => {
         });
     }
 });
+
 /**
  * @description 上传头像
  * @api #{POST} /uploadHead
@@ -515,8 +527,8 @@ router.post("/uploadHead", upload.any(), async (req, resp) => {
     let body = req.body;
     let openid = body.openid;
     let oldUrl = body.oldUrl;
-    let chatHead = body.chatHead;
-    let portraitUrl = await common.fileKey(chatHead);
+    let chatHead = req.files;
+    let portraitUrl = await common.fileKey(chatHead[0]);
     let putFile = await common.putFile(chatHead.buffer, portraitUrl);
     await common.deleteFile(oldUrl);
     let promise = mysql.query('UPDATE customer SET portrait_url="' + portraitUrl +
