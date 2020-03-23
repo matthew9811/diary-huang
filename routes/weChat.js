@@ -473,30 +473,54 @@ router.get('/getPersonDiaryList', async (req, resp) => {
 /**
  * @description
  * @api #{GET} /getDiaryDetail
- * @param diaryUrl
+ * @param diaryUrl 文章路径
+ * @param openid 当前用户的openid
  */
 router.get("/getDiaryDetail", async (req, resp) => {
     let query = req.query;
     let diaryUrl = query.diaryUrl;
-    let data = await mysql.query()
+    let openid = query.openid;
     let file = await common.getFile(diaryUrl);
+    let sql = "SELECT\n" +
+        "\tf.*,\n" +
+        "\tCOUNT( c.id ) AS collectNum,\n" +
+        "\tisc.num AS isCollect \n" +
+        "FROM\n" +
+        "\tfood_diary AS f\n" +
+        "\tLEFT JOIN collect c ON f.id = c.diary_id\n" +
+        "\tLEFT JOIN ( SELECT count( 1 ) AS num FROM collect WHERE openid = '" + openid + "' ) AS isc ON 1 = 1 \n" +
+        "WHERE\n" +
+        "\tf.diary_url = '" + diaryUrl + "' \n" +
+        "GROUP BY\n" +
+        "\tf.id,\n" +
+        "\tisc.num";
+    console.log(sql);
+    let sqlData = await mysql.query(sql);
     if (file.statusCode == 200) {
-        await fs.readFile('./' + diaryUrl, (err, data) => {
+        await fs.readFile('./' + diaryUrl, async (err, data) => {
             console.log(data || err);
-            fs.unlink('./' + diaryUrl, err1 => console.log(err1));
-            resp.json({code: 200, msg: '内容校验正常', data: data.toString()});
+            await fs.unlink('./' + diaryUrl, err1 => console.log(err1));
+            resp.json({code: 200, msg: '内容校验正常', data: data.toString(), sql: sqlData});
         });
     }
 });
 /**
- * @api {POST} /test
- * @apiDescription 用于测试，返回信息没有特定格式
- *
+ * @description 上传头像
+ * @api #{POST} /uploadHead
+ * @param chatHead 头像
+ * @param oldUrl 旧的头像数据
+ * @param openid
  */
-router.post("/test", upload.any(), async function (req, resp) {
-    let tableName = "customer";
-    let pageTotalNum = await pageHelper.totalNum(tableName, '');
-    console.log(pageTotalNum[0].total);
-    await resp.json(pageTotalNum);
+router.post("/uploadHead", upload.any(), async (req, resp) => {
+    let body = req.body;
+    let openid = body.openid;
+    let oldUrl = body.oldUrl;
+    let chatHead = body.chatHead;
+    let portraitUrl = await common.fileKey(chatHead);
+    let putFile = await common.putFile(chatHead.buffer, portraitUrl);
+    await common.deleteFile(oldUrl);
+    let promise = mysql.query('UPDATE customer SET portrait_url="' + portraitUrl +
+        '" WHERE openid = "' + openid + '"');
+    resp.json({code: 200, msg: '修改成功'});
 });
 module.exports = router;

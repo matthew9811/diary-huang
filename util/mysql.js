@@ -30,7 +30,7 @@ module.exports.queryParams = function (sql, params) {
     })
 };
 
-module.exports.query = function (sql) {
+module.exports.query = async function (sql) {
     console.log("sql语句为>>>>>   ", sql);
     return new Promise((resolve, reject) => {
         pool.getConnection((err, connection) => {

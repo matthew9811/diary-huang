@@ -63,6 +63,21 @@ function fileKey(file) {
     return uuid() + '.' + split[split.length - 1];
 }
 
+function deleteFile(file) {
+    return new Promise((resolve, reject) => {
+        cos.deleteObject({
+            Bucket: '47-1256569009', /* 桶名必须 */
+            Region: 'ap-chengdu',    /* 桶域必须 */
+            Key: file,              /* 必须 */
+        }, function (err, data) {
+            console.log(err || data);
+            if (!err) {
+                resolve(data);
+            }
+        });
+    });
+}
+
 function fileName(suffix) {
     return uuid() + '.' + suffix;
 }
@@ -72,3 +87,4 @@ module.exports.putFile = putFile;
 module.exports.fileKey = fileKey;
 module.exports.fileName = fileName;
 module.exports.getFile = getFile;
+module.exports.deleteFile = deleteFile;
