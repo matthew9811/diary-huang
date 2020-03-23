@@ -107,7 +107,8 @@ router.get("/getDiaryList", async (req, resp) => {
     let param = req.query;
     let count = param.count;
     let page = param.page;
-    let totalNum = await pageHelper.page(page, count, 'food_diary.title, food_diary.id, food_diary.diary_url, ' +
+    let totalNum = await pageHelper.page(page, count, 'food_diary.title, food_diary.id, food_diary.diary_url as diaryUrl,' +
+        ' food_diary.create_time as createTime, ' +
         'count( collect.diary_id ) as collectNum, image.url as cover, customer.nickname ',
         " food_diary LEFT JOIN collect ON food_diary.id = collect.diary_id " +
         " LEFT JOIN image ON food_diary.id = image.diary_id AND image.sort = 0 " +
@@ -129,8 +130,8 @@ router.get('/searchDiary', async (req, resp) => {
     let tempTitle = param.tempTitle;
     let count = param.count;
     let page = param.page;
-    let totalNum = await pageHelper.page(page, count, " food_diary.title, food_diary.id, food_diary.diary_url, " +
-        " count( collect.diary_id ) as collectNum, image.url as cover ",
+    let totalNum = await pageHelper.page(page, count, " food_diary.title, food_diary.id, food_diary.diary_url as diaryUrl, " +
+        "food_diary.create_time as createTime, count( collect.diary_id ) as collectNum, image.url as cover ",
         " food_diary LEFT JOIN collect ON food_diary.id = collect.diary_id " +
         " LEFT JOIN image ON food_diary.id = image.diary_id AND image.sort = 0 " +
         " LEFT JOIN customer ON customer.openid = food_diary.openid ",
@@ -389,7 +390,7 @@ router.get('/userMsg', async (req, res) => {
         ' id, ' +
         ' openid, ' +
         ' nickname, ' +
-        ' portrait_url ' +
+        ' portrait_url as  portraitUrl ' +
         'FROM ' +
         ' customer  ' +
         'WHERE ' +
@@ -427,7 +428,8 @@ router.get("/getCollectList", async (req, resp) => {
     let sql = "SELECT\n" +
         "\tf.id,\n" +
         "\tf.title,\n" +
-        "\tf.diary_url,\n" +
+        "\tf.diary_url as diaryUrl,\n" +
+        "\tf.create_time as createTime,\n " +
         "\tcus.nickname,\n" +
         "\tcount( c.diary_id ) AS collectNum \n" +
         "FROM\n" +
@@ -437,7 +439,7 @@ router.get("/getCollectList", async (req, resp) => {
         "\tLEFT JOIN customer AS au ON au.openid = c.openid \n" +
         "WHERE\n" +
         "\tf.`status` = '1' \n" +
-        "\tAND au.openid = '13246546546' \n" +
+        "\tAND au.openid = '" + openid + '"/n' +
         "GROUP BY\n" +
         "\tf.id"
     resp.json(await mysql.query(sql));
@@ -454,7 +456,8 @@ router.get('/getPersonDiaryList', async (req, resp) => {
     let sql = 'SELECT\n' +
         '\tf.id,\n' +
         '\tf.title,\n' +
-        '\tf.diary_url,\n' +
+        '\tf.diary_url as diaryUrl,\n' +
+        '\tf.create_time as createTime,\n' +
         '\tf.`status`,\n' +
         '\tcus.nickname,\n' +
         '\tcount( c.diary_id ) AS collectNum \n' +
