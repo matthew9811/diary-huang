@@ -370,7 +370,7 @@ router.get('/cancelCollect', async (req, resp) => {
                             if (result) {
                                 let affectedRows = JSON.parse(JSON.stringify(result)).affectedRows;
                                 if (affectedRows > 0) {
-                                    resp.json({code: 200, msg: '取消成功!', data:{status: 0}});
+                                    resp.json({code: 200, msg: '取消成功!', data: {status: 0}});
                                 } else {
                                     resp.json({code: 203, msg: '取消失败!', data: '尚未收藏'});
                                 }
@@ -492,25 +492,33 @@ router.get("/getDiaryDetail", async (req, resp) => {
     let diaryUrl = query.diaryUrl;
     let openid = query.openid;
     let file = await common.getFile(diaryUrl);
-    let sql = "SELECT\n" +
-        "\tf.*,\n" +
+    let sqlData = await mysql.query("SELECT\n" +
+        "\tf.id,\n" +
+        "\tf.title,\n" +
+        "\tf.`status`,\n" +
+        "\tf.diary_url AS diaryUrl,\n" +
+        "\tf.create_time AS createTime,\n" +
         "\tCOUNT( c.id ) AS collectNum,\n" +
-        "\tisc.num AS isCollect \n" +
+        "\tisc.num AS isCollect,\n" +
+        "\tcus.portrait_url as portraitUrl,\n" +
+        "\tcus.nickname\n" +
         "FROM\n" +
         "\tfood_diary AS f\n" +
         "\tLEFT JOIN collect c ON f.id = c.diary_id\n" +
+        "\tLEFT JOIN ( SELECT portrait_url, id, nickname FROM customer AS c WHERE c.openid = '" + openid + "' ) AS cus ON 1 = 1\n" +
         "\tLEFT JOIN ( SELECT count( 1 ) AS num FROM collect WHERE openid = '" + openid + "' ) AS isc ON 1 = 1 \n" +
         "WHERE\n" +
         "\tf.diary_url = '" + diaryUrl + "' \n" +
         "GROUP BY\n" +
         "\tf.id,\n" +
-        "\tisc.num";
-    let sqlData = await mysql.query(sql);
+        "\tisc.num");
+    let imageSql = 'SELECT id, diary_id as diaryId, url, sort FROM image WHERE diary_id =' + sqlData[0].id;
+    let promise = await mysql.query(imageSql);
     if (file.statusCode == 200) {
         await fs.readFile('./' + diaryUrl, async (err, data) => {
             console.log(data || err);
             await fs.unlink('./' + diaryUrl, err1 => console.log(err1));
-            resp.json({code: 200, msg: '内容校验正常', data: data.toString(), sql: sqlData});
+            resp.json({code: 200, msg: '内容校验正常', data: data.toString(), sql: {diary: sqlData, images: promise}});
         });
     }
 });
