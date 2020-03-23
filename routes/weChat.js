@@ -112,7 +112,7 @@ router.get("/getDiaryList", async (req, resp) => {
     let page = param.page;
     let openid = param.openid;
     let totalNum = await pageHelper.page(page, count, 'food_diary.title, food_diary.id, food_diary.diary_url as diaryUrl,' +
-        ' food_diary.create_time as createTime, isc.num, ' +
+        ' food_diary.create_time as createTime, isc.num as isCollect, ' +
         'count( collect.diary_id ) as collectNum, image.url as cover, customer.nickname ',
         " food_diary LEFT JOIN collect ON food_diary.id = collect.diary_id " +
         " LEFT JOIN image ON food_diary.id = image.diary_id AND image.sort = 0 " +
@@ -138,7 +138,7 @@ router.get('/searchDiary', async (req, resp) => {
     let page = param.page;
     let openid = param.openid;
     let totalNum = await pageHelper.page(page, count, " food_diary.title, food_diary.id, food_diary.diary_url as diaryUrl, " +
-        "food_diary.create_time as createTime, count( collect.diary_id ) as collectNum, image.url as cover, isc.num ",
+        "food_diary.create_time as createTime, count( collect.diary_id ) as collectNum, image.url as cover, isc.num as isCollect",
         " food_diary LEFT JOIN collect ON food_diary.id = collect.diary_id " +
         " LEFT JOIN image ON food_diary.id = image.diary_id AND image.sort = 0 " +
         " LEFT JOIN (SELECT count(-1) as num FROM collect as c WHERE c.openid = '" + openid + "') as isc on 1 = 1 " +
@@ -306,7 +306,7 @@ router.get('/collect', async (req, resp) => {
     let diaryId = query.diaryId;
     let sql = "INSERT collect(openid, diary_id) VALUE( '" + openid + "', " + diaryId + ")";
     //获取连接
-    pool.getConnection((err, connection) => {
+    await pool.getConnection((err, connection) => {
         //开启事务
         connection.beginTransaction(err => {
             //进行判断，确定是否已经收藏
@@ -326,7 +326,7 @@ router.get('/collect', async (req, resp) => {
                                 let parse = JSON.parse(JSON.stringify(result));
                                 //插入成功
                                 if (parse.affectedRows == 1) {
-                                    resp.json({code: 200, msg: '收藏成功！'})
+                                    resp.json({code: 200, msg: '收藏成功！', data: {status: 1}})
                                 } else {
                                     resp.json({code: 500, msg: '数据库操作失败!'})
                                 }
@@ -370,7 +370,7 @@ router.get('/cancelCollect', async (req, resp) => {
                             if (result) {
                                 let affectedRows = JSON.parse(JSON.stringify(result)).affectedRows;
                                 if (affectedRows > 0) {
-                                    resp.json({code: 200, msg: '取消成功!'});
+                                    resp.json({code: 200, msg: '取消成功!', data:{status: 0}});
                                 } else {
                                     resp.json({code: 203, msg: '取消失败!', data: '尚未收藏'});
                                 }
@@ -505,7 +505,6 @@ router.get("/getDiaryDetail", async (req, resp) => {
         "GROUP BY\n" +
         "\tf.id,\n" +
         "\tisc.num";
-    console.log(sql);
     let sqlData = await mysql.query(sql);
     if (file.statusCode == 200) {
         await fs.readFile('./' + diaryUrl, async (err, data) => {
