@@ -529,7 +529,7 @@ router.post("/uploadHead", upload.any(), async (req, resp) => {
     let oldUrl = body.oldUrl;
     let chatHead = req.files;
     let portraitUrl = await common.fileKey(chatHead[0]);
-    let putFile = await common.putFile(chatHead.buffer, portraitUrl);
+    let putFile = await common.putFile(chatHead[0].buffer, portraitUrl);
     await common.deleteFile(oldUrl);
     let promise = mysql.query('UPDATE customer SET portrait_url="' + portraitUrl +
         '" WHERE openid = "' + openid + '"');
