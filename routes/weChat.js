@@ -429,15 +429,17 @@ router.get("/getCollectList", async (req, resp) => {
         "\tf.title,\n" +
         "\tf.diary_url,\n" +
         "\tcus.nickname,\n" +
-        "\tcount( c.diary_id ) AS collectNum, '楚苓大妈的内容' as content \n" +
+        "\tcount( c.diary_id ) AS collectNum \n" +
         "FROM\n" +
         "\tcollect AS c\n" +
         "\tLEFT JOIN food_diary AS f ON c.diary_id = f.id\n" +
-        "\tLEFT JOIN customer AS cus ON f.openid = cus.openid \n" +
+        "\tLEFT JOIN customer AS cus ON f.openid = cus.openid\n" +
+        "\tLEFT JOIN customer AS au ON au.openid = c.openid \n" +
         "WHERE\n" +
-        "\tf.`status` = '1' AND f.openid = '" + openid + "' \n" +
+        "\tf.`status` = '1' \n" +
+        "\tAND au.openid = '13246546546' \n" +
         "GROUP BY\n" +
-        "\tf.id, cus.nickname";
+        "\tf.id"
     resp.json(await mysql.query(sql));
 });
 /**
@@ -449,30 +451,31 @@ router.get('/getPersonDiaryList', async (req, resp) => {
     let query = req.query;
     let openid = query.openid;
 
-    let sql = "SELECT\n" +
-        "\tf.id,\n" +
-        "\tf.title,\n" +
-        "\tf.diary_url,\n" +
-        "\tcus.nickname,\n" +
-        "\tcount( c.diary_id ) AS collectNum, '楚苓大妈的内容' as content \n" +
-        "FROM\n" +
-        "\tcollect AS c\n" +
-        "\tLEFT JOIN food_diary AS f ON c.diary_id = f.id\n" +
-        "\tLEFT JOIN customer AS cus ON f.openid = cus.openid \n" +
-        "WHERE\n" +
-        "\tf.`status` = '1' AND f.openid = '" + openid + "' \n" +
-        "GROUP BY\n" +
-        "\tf.id, cus.nickname";
+    let sql = 'SELECT\n' +
+        '\tf.id,\n' +
+        '\tf.title,\n' +
+        '\tf.diary_url,\n' +
+        '\tf.`status`,\n' +
+        '\tcus.nickname,\n' +
+        '\tcount( c.diary_id ) AS collectNum \n' +
+        'FROM\n' +
+        '\tfood_diary AS f\n' +
+        '\tLEFT JOIN collect AS c ON c.diary_id = f.id\n' +
+        '\tLEFT JOIN customer AS cus ON f.openid = cus.openid \n' +
+        '\tWHERE f.openid = "' + openid + '"\n' +
+        'GROUP BY\n' +
+        '\tf.id';
     resp.json(await mysql.query(sql));
 });
 /**
  * @description
  * @api #{GET} /getDiaryDetail
- * @param diaryUrl 日记对应的url
+ * @param diaryUrl
  */
 router.get("/getDiaryDetail", async (req, resp) => {
     let query = req.query;
     let diaryUrl = query.diaryUrl;
+    let data = await mysql.query()
     let file = await common.getFile(diaryUrl);
     if (file.statusCode == 200) {
         await fs.readFile('./' + diaryUrl, (err, data) => {
