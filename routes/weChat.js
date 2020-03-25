@@ -236,8 +236,23 @@ router.get('/auditList', async function (req, resp) {
     let param = req.query;
     let page = param.page;
     let count = param.count;
-    resp.json(await pageHelper.page(page, count, ' id, title ',
-        ' food_diary ', ' where status = 2 '))
+    resp.json(await pageHelper.page(page, count, ' f.id,\n' +
+        '\tf.title,\n' +
+        '\tf.diary_url AS diaryUrl,\n' +
+        '\tf.create_time AS createTime,\n' +
+        '\tf.openid,\n' +
+        '\tc.nickname,\n' +
+        '\tc.portrait_url AS portraitUrl,\n' +
+        '\tc.id,\n' +
+        '\ti.url AS cover ',
+        ' food_diary AS f\n' +
+        '\tLEFT JOIN customer AS c ON c.openid = f.openid\n' +
+        '\tLEFT JOIN image AS i ON i.diary_id = f.id \n' +
+        '\tAND i.sort = 0  ',
+        ' WHERE\n' +
+        '\tf.`status` = 2 \n' +
+        'ORDER BY\n' +
+        '\tf.create_time DESC '))
 });
 
 /**
