@@ -445,10 +445,9 @@ router.get("/getCollectList", async (req, resp) => {
         "\tcollect AS c\n" +
         "\tLEFT JOIN food_diary AS f ON c.diary_id = f.id\n" +
         "\tLEFT JOIN customer AS cus ON f.openid = cus.openid\n" +
-        "\tLEFT JOIN customer AS au ON au.openid = c.openid \n" +
+        "\tLEFT JOIN customer AS au ON au.openid = c.openid \n" + "\tAND au.openid = '" + openid + "'\n" +
         "WHERE\n" +
         "\tf.`status` = '1' \n" +
-        "\tAND au.openid = '" + openid + "'\n" +
         "GROUP BY\n" +
         "\tf.id"
     resp.json(await mysql.query(sql));
@@ -470,14 +469,17 @@ router.get('/getPersonDiaryList', async (req, resp) => {
         '\tf.create_time as createTime,\n' +
         '\tf.`status`,\n' +
         '\tcus.nickname,\n' +
-        '\tcount( c.diary_id ) AS collectNum \n' +
+        '\tcount( c.diary_id ) AS collectNum, \n' +
+        '\timage.url AS cover \n' +
         'FROM\n' +
         '\tfood_diary AS f\n' +
         '\tLEFT JOIN collect AS c ON c.diary_id = f.id\n' +
         '\tLEFT JOIN customer AS cus ON f.openid = cus.openid \n' +
+        '\tLEFT JOIN ( SELECT * FROM image WHERE sort = 0 ) AS image ON image.diary_id = f.id \n' +
         '\tWHERE f.openid = "' + openid + '"\n' +
         'GROUP BY\n' +
-        '\tf.id';
+        '\tf.id,\n' +
+        '\timage.url'
     resp.json(await mysql.query(sql));
 });
 
@@ -521,6 +523,30 @@ router.get("/getDiaryDetail", async (req, resp) => {
             resp.json({code: 200, msg: '内容校验正常', data: data.toString(), sql: {diary: sqlData, images: promise}});
         });
     }
+});
+/**
+ * @description 获取用户的收藏量和发表量
+ * @api #{GET}/getData
+ * @param openid
+ */
+router.get('/getData', async (req, resp) => {
+    let query = req.query;
+    let openid = query.openid;
+    let collectSql = "SELECT\n" +
+        "\tCOUNT(- 1 ) AS collectNum \n" +
+        "FROM\n" +
+        "\tcollect \n" +
+        "WHERE\n" +
+        "\topenid = '" + openid + "'";
+    let personSql = "SELECT\n" +
+        "\tCOUNT(- 1 ) AS personal \n" +
+        "FROM\n" +
+        "\tfood_diary \n" +
+        "WHERE\n" +
+        "\topenid = '" + openid + "'";
+    let collect = await mysql.query(collectSql);
+    let person = await mysql.query(personSql);
+    resp.json({code: 200, msg: '数据正常', data: collect.concat(person)});
 });
 
 /**
