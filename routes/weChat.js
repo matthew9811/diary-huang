@@ -243,7 +243,7 @@ router.get('/auditList', async function (req, resp) {
         '\tf.openid,\n' +
         '\tc.nickname,\n' +
         '\tc.portrait_url AS portraitUrl,\n' +
-        '\tc.id,\n' +
+        '\tf.id,\n' +
         '\ti.url AS cover ',
         ' food_diary AS f\n' +
         '\tLEFT JOIN customer AS c ON c.openid = f.openid\n' +
@@ -279,8 +279,8 @@ router.post('/submitAudit', async function (req, resp) {
             connection.query(sql, (err, result) => {
                 if (result) {
                     let data = JSON.parse(JSON.stringify(result));
-                    if (data > 0) {
-                        resp.json({code: 200, msg: "审核成功!", data: "审核成功 " + data + "条数据"})
+                    if (data.affectedRows > 0) {
+                        resp.json({code: 200, msg: "审核成功!", data: "审核成功 " + data.affectedRows + "条数据"})
                     } else {
                         resp.json({code: 201, msg: "审核失败", data: "无对应数据！"});
                     }
@@ -455,16 +455,19 @@ router.get("/getCollectList", async (req, resp) => {
         "\tf.diary_url as diaryUrl,\n" +
         "\tf.create_time as createTime,\n " +
         "\tcus.nickname,\n" +
-        "\tcount( c.diary_id ) AS collectNum \n" +
+        "\tcount( c.diary_id ) AS collectNum, \n" +
+        '\timage.url AS cover \n' +
         "FROM\n" +
         "\tcollect AS c\n" +
         "\tLEFT JOIN food_diary AS f ON c.diary_id = f.id\n" +
         "\tLEFT JOIN customer AS cus ON f.openid = cus.openid\n" +
+        '\tLEFT JOIN ( SELECT * FROM image WHERE sort = 0 limit 1) AS image ON image.diary_id = f.id \n' +
         "\tLEFT JOIN customer AS au ON au.openid = c.openid \n" + "\tAND au.openid = '" + openid + "'\n" +
         "WHERE\n" +
         "\tf.`status` = '1' \n" +
         "GROUP BY\n" +
-        "\tf.id"
+        "\tf.id, \n" +
+        '\timage.url\n';
     resp.json(await mysql.query(sql));
 });
 
