@@ -197,7 +197,7 @@ router.post('/uploadDiaryImages', upload.any(), async (req, res) => {
     let diaryId = req.body.diaryId;
     let files = req.files;
     let arrObj = new Array(files.length);
-
+    let promise = await mysql.query("SELECT count(-1) as num FROM image WHERE diary_id = " + diaryId);
     await pool.getConnection((err, conn) => {
         conn.beginTransaction(err => {
             for (let i = 0, len = files.length; i < len; i++) {
@@ -208,7 +208,8 @@ router.post('/uploadDiaryImages', upload.any(), async (req, res) => {
             console.log(arrObj);
             let sql = "INSERT INTO image(url, sort, diary_id) VALUES ";
             for (let i = 0, len = arrObj.length; i < len; i++) {
-                sql = sql.concat('(  \"' + arrObj[i].name + '\", ' + arrObj[i].num + ', ' + diaryId + ')');
+                let number = parseInt(arrObj[i].num) + parseInt(promise[0].num);
+                sql = sql.concat('(  \"' + arrObj[i].name + '\", ' + number + ', ' + diaryId + ')');
                 if (i != len - 1) {
                     sql = sql.concat(',');
                 }
