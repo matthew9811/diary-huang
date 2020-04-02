@@ -137,14 +137,32 @@ router.get('/searchDiary', async (req, resp) => {
     let count = param.count;
     let page = param.page;
     let openid = param.openid;
-    let totalNum = await pageHelper.page(page, count, " food_diary.title, food_diary.id, food_diary.diary_url as diaryUrl, " +
-        "food_diary.create_time as createTime, count( collect.diary_id ) as collectNum, image.url as cover, isc.num as isCollect",
-        " food_diary LEFT JOIN collect ON food_diary.id = collect.diary_id " +
-        " LEFT JOIN image ON food_diary.id = image.diary_id AND image.sort = 0 " +
-        " LEFT JOIN (SELECT count(-1) as num FROM collect as c WHERE c.openid = '" + openid + "') as isc on 1 = 1 " +
-        " LEFT JOIN customer ON customer.openid = food_diary.openid ",
-        " where food_diary.`status` = 1 AND title like '%" + tempTitle + "%' " +
-        " GROUP BY food_diary.id, image.url, customer.nickname, isc.num  ");
+    let totalNum = await pageHelper.page(page, count,
+        " m.*,\n" +
+        "\tCOUNT( c.diary_id ) AS collectNum,\n" +
+        "\t( SELECT count(*) " +
+        " FROM collect AS c " +
+        "WHERE " +
+        "c.openid = '" + openid + "' AND c.diary_id = m.id ) AS isCollect ",
+        " \t(\n" +
+        "\tSELECT\n" +
+        "\t\tf.id,\n" +
+        "\t\tf.create_time AS creaTime,\n" +
+        "\t\tf.diary_url AS diaryUrl,\n" +
+        "\t\tf.openid,\n" +
+        "\t\tf.title,\n" +
+        "\t\tf.review_time AS reviewTime,\n" +
+        "\t\tcus.nickname \n" +
+        "\tFROM\n" +
+        "\t\tfood_diary AS f\n" +
+        "\t\tLEFT JOIN customer AS cus ON f.openid = cus.openid\n" +
+        "\t\tLEFT JOIN ( SELECT diary_id, url FROM image WHERE sort = 0 ) AS i ON f.id = i.diary_id \n" +
+        "\tWHERE\n" +
+        "\t\tf.`status` = '1' \n" +
+        "\t\tAND f.title LIKE '%" + tempTitle + "%' \n" +
+        "\t) AS m\n" +
+        "\tLEFT JOIN collect AS c ON m.id = c.diary_id  ",
+        " GROUP BY m.id  ");
     resp.json(totalNum);
 });
 
@@ -463,11 +481,12 @@ router.get("/getCollectList", async (req, resp) => {
         "\tLEFT JOIN food_diary AS f ON c.diary_id = f.id\n" +
         "\tLEFT JOIN customer AS cus ON f.openid = cus.openid\n" +
         '\tLEFT JOIN ( SELECT * FROM image WHERE sort = 0 limit 1) AS image ON image.diary_id = f.id \n' +
-        "\tLEFT JOIN customer AS au ON au.openid = c.openid \n" + "\tAND au.openid = '" + openid + "'\n" +
+        "\tLEFT JOIN customer AS au ON au.openid = c.openid \n" +
         "WHERE\n" +
         "\tf.`status` = '1' \n" +
+        "\tAND au.openid = '" + openid + "'\n" +
         "GROUP BY\n" +
-        "\tf.id, \n" +
+        "\tc.diary_id, \n" +
         '\timage.url\n';
     resp.json(await mysql.query(sql));
 });
@@ -512,7 +531,6 @@ router.get("/getDiaryDetail", async (req, resp) => {
     let query = req.query;
     let diaryUrl = query.diaryUrl;
     let openid = query.openid;
-    let file = await common.getFile(diaryUrl);
     let sqlData = await mysql.query("SELECT\n" +
         "\tf.id,\n" +
         "\tf.title,\n" +
@@ -520,21 +538,20 @@ router.get("/getDiaryDetail", async (req, resp) => {
         "\tf.diary_url AS diaryUrl,\n" +
         "\tf.create_time AS createTime,\n" +
         "\tCOUNT( c.id ) AS collectNum,\n" +
-        "\tisc.num AS isCollect,\n" +
+        "\t( SELECT count(*) FROM collect WHERE openid = '" + openid +"' AND diary_id = f.id ) as isCollect,\n" +
         "\tcus.portrait_url as portraitUrl,\n" +
         "\tcus.nickname\n" +
         "FROM\n" +
         "\tfood_diary AS f\n" +
         "\tLEFT JOIN collect c ON f.id = c.diary_id\n" +
         "\tLEFT JOIN ( SELECT portrait_url, id, nickname FROM customer AS c WHERE c.openid = '" + openid + "' ) AS cus ON 1 = 1\n" +
-        "\tLEFT JOIN ( SELECT count( 1 ) AS num FROM collect WHERE openid = '" + openid + "' ) AS isc ON 1 = 1 \n" +
         "WHERE\n" +
         "\tf.diary_url = '" + diaryUrl + "' \n" +
         "GROUP BY\n" +
-        "\tf.id,\n" +
-        "\tisc.num");
+        "\tf.id\n" );
     let imageSql = 'SELECT id, diary_id as diaryId, url, sort FROM image WHERE diary_id =' + sqlData[0].id;
     let promise = await mysql.query(imageSql);
+    let file = await common.getFile(diaryUrl);
     if (file.statusCode == 200) {
         await fs.readFile('./' + diaryUrl, async (err, data) => {
             console.log(data || err);

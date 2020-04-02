@@ -9,7 +9,9 @@ let pool = mysql.pool;
  */
 async function totalNum(tableName, limited) {
     return new Promise((resolve, reject) => {
-        let sql = 'select count(*) as total from ' + tableName + limited;
+        let sql = 'SELECT\n' +
+            '\tcount(*) AS total \n' +
+            'FROM (select count(1) as total from ' + tableName + limited + ') as t';
         pool.getConnection(function (err, connection) {
             connection.query(sql, (err, total) => {
                 if (err) {
