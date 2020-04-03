@@ -111,14 +111,31 @@ router.get("/getDiaryList", async (req, resp) => {
     let count = param.count;
     let page = param.page;
     let openid = param.openid;
-    let totalNum = await pageHelper.page(page, count, 'food_diary.title, food_diary.id, food_diary.diary_url as diaryUrl,' +
-        ' food_diary.create_time as createTime, isc.num as isCollect, ' +
-        'count( collect.diary_id ) as collectNum, image.url as cover, customer.nickname ',
-        " food_diary LEFT JOIN collect ON food_diary.id = collect.diary_id " +
-        " LEFT JOIN image ON food_diary.id = image.diary_id AND image.sort = 0 " +
-        " LEFT JOIN (SELECT count(-1) as num FROM collect as c WHERE c.openid = '" + openid + "') as isc on 1 = 1 " +
-        " LEFT JOIN customer ON customer.openid = food_diary.openid ",
-        " WHERE food_diary.`status` = 1 GROUP BY food_diary.id, image.url, customer.nickname, isc.num ");
+    let totalNum = await pageHelper.page(page, count,
+        " m.*,\n" +
+        "\tCOUNT( c.diary_id ) AS collectNum,\n" +
+        "\t( SELECT count(*) " +
+        " FROM collect AS c " +
+        "WHERE " +
+        "c.openid = '" + openid + "' AND c.diary_id = m.id ) AS isCollect ",
+        " \t(\n" +
+        "\tSELECT\n" +
+        "\t\tf.id,\n" +
+        "\t\tf.create_time AS creaTime,\n" +
+        "\t\tf.diary_url AS diaryUrl,\n" +
+        "\t\tf.openid,\n" +
+        "\t\tf.title,\n" +
+        "\t\tf.review_time AS reviewTime,\n" +
+        "\t\tcus.nickname \n" +
+        "\tFROM\n" +
+        "\t\tfood_diary AS f\n" +
+        "\t\tLEFT JOIN customer AS cus ON f.openid = cus.openid\n" +
+        "\t\tLEFT JOIN ( SELECT diary_id, url FROM image WHERE sort = 0 ) AS i ON f.id = i.diary_id \n" +
+        "\tWHERE\n" +
+        "\t\tf.`status` = '1' \n" +
+        "\t) AS m\n" +
+        "\tLEFT JOIN collect AS c ON m.id = c.diary_id  ",
+        " GROUP BY m.id  ");
     resp.json(totalNum);
 });
 
