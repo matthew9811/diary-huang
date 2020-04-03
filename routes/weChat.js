@@ -526,6 +526,7 @@ router.get('/getPersonDiaryList', async (req, resp) => {
  * @api #{GET} /getDiaryDetail
  * @param diaryUrl 文章路径
  * @param openid 当前用户的openid
+ *
  */
 router.get("/getDiaryDetail", async (req, resp) => {
     let query = req.query;
