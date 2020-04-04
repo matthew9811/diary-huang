@@ -121,12 +121,13 @@ router.get("/getDiaryList", async (req, resp) => {
         " \t(\n" +
         "\tSELECT\n" +
         "\t\tf.id,\n" +
-        "\t\tf.create_time AS creaTime,\n" +
+        "\t\tf.create_time AS createTime,\n" +
         "\t\tf.diary_url AS diaryUrl,\n" +
         "\t\tf.openid,\n" +
         "\t\tf.title,\n" +
         "\t\tf.review_time AS reviewTime,\n" +
-        "\t\tcus.nickname \n" +
+        "\t\tcus.nickname, \n" +
+        "\t\ti.url AS cover \n" +
         "\tFROM\n" +
         "\t\tfood_diary AS f\n" +
         "\t\tLEFT JOIN customer AS cus ON f.openid = cus.openid\n" +
@@ -135,7 +136,10 @@ router.get("/getDiaryList", async (req, resp) => {
         "\t\tf.`status` = '1' \n" +
         "\t) AS m\n" +
         "\tLEFT JOIN collect AS c ON m.id = c.diary_id  ",
-        " GROUP BY m.id  ");
+        " GROUP BY m.id,\n" +
+        "\tm.cover " +
+        "ORDER BY\n" +
+        "\tcreateTime DESC");
     resp.json(totalNum);
 });
 
@@ -164,12 +168,13 @@ router.get('/searchDiary', async (req, resp) => {
         " \t(\n" +
         "\tSELECT\n" +
         "\t\tf.id,\n" +
-        "\t\tf.create_time AS creaTime,\n" +
+        "\t\tf.create_time AS createTime,\n" +
         "\t\tf.diary_url AS diaryUrl,\n" +
         "\t\tf.openid,\n" +
         "\t\tf.title,\n" +
         "\t\tf.review_time AS reviewTime,\n" +
-        "\t\tcus.nickname \n" +
+        "\t\tcus.nickname, \n" +
+        "\t\ti.url AS cover \n" +
         "\tFROM\n" +
         "\t\tfood_diary AS f\n" +
         "\t\tLEFT JOIN customer AS cus ON f.openid = cus.openid\n" +
@@ -179,7 +184,10 @@ router.get('/searchDiary', async (req, resp) => {
         "\t\tAND f.title LIKE '%" + tempTitle + "%' \n" +
         "\t) AS m\n" +
         "\tLEFT JOIN collect AS c ON m.id = c.diary_id  ",
-        " GROUP BY m.id  ");
+        " GROUP BY m.id," +
+        "\t\tm.cover " +
+        "ORDER BY\n" +
+        "\tcreateTime DESC");
     resp.json(totalNum);
 });
 
@@ -336,7 +344,8 @@ router.post('/submitAudit', async function (req, resp) {
  * @apiParam pwd 密码
  */
 router.get('/managerLogin', async (req, resp) => {
-    let query = await mysql.query("select count(id) as count from manager where password = '" + req.query.pwd + "'");
+    let query = await mysql.query("select count(id) as count " +
+        "from manager where password = '" + req.query.pwd + "'");
     console.log(query);
     if (query[0].count == 1) {
         resp.json({code: 200, msg: 'password is true'});
@@ -355,7 +364,8 @@ router.get('/collect', async (req, resp) => {
     let query = req.query;
     let openid = query.openid;
     let diaryId = query.diaryId;
-    let sql = "INSERT collect(openid, diary_id) VALUE( '" + openid + "', " + diaryId + ")";
+    let sql = "INSERT collect(openid, diary_id) VALUE( '" +
+        openid + "', " + diaryId + ")";
     //获取连接
     await pool.getConnection((err, connection) => {
         //开启事务
@@ -497,14 +507,16 @@ router.get("/getCollectList", async (req, resp) => {
         "\tcollect AS c\n" +
         "\tLEFT JOIN food_diary AS f ON c.diary_id = f.id\n" +
         "\tLEFT JOIN customer AS cus ON f.openid = cus.openid\n" +
-        '\tLEFT JOIN ( SELECT * FROM image WHERE sort = 0 limit 1) AS image ON image.diary_id = f.id \n' +
+        '\tLEFT JOIN ( SELECT * FROM image WHERE sort = 0 ) AS image ON image.diary_id = f.id \n' +
         "\tLEFT JOIN customer AS au ON au.openid = c.openid \n" +
         "WHERE\n" +
         "\tf.`status` = '1' \n" +
         "\tAND au.openid = '" + openid + "'\n" +
         "GROUP BY\n" +
         "\tc.diary_id, \n" +
-        '\timage.url\n';
+        '\timage.url\n' +
+        'ORDER BY\n' +
+        '\tcreateTime DESC';
     resp.json(await mysql.query(sql));
 });
 
@@ -556,7 +568,7 @@ router.get("/getDiaryDetail", async (req, resp) => {
         "\tf.diary_url AS diaryUrl,\n" +
         "\tf.create_time AS createTime,\n" +
         "\tCOUNT( c.id ) AS collectNum,\n" +
-        "\t( SELECT count(*) FROM collect WHERE openid = '" + openid +"' AND diary_id = f.id ) as isCollect,\n" +
+        "\t( SELECT count(*) FROM collect WHERE openid = '" + openid + "' AND diary_id = f.id ) as isCollect,\n" +
         "\tcus.portrait_url as portraitUrl,\n" +
         "\tcus.nickname\n" +
         "FROM\n" +
@@ -566,7 +578,7 @@ router.get("/getDiaryDetail", async (req, resp) => {
         "WHERE\n" +
         "\tf.diary_url = '" + diaryUrl + "' \n" +
         "GROUP BY\n" +
-        "\tf.id\n" );
+        "\tf.id\n");
     let imageSql = 'SELECT id, diary_id as diaryId, url, sort FROM image WHERE diary_id =' + sqlData[0].id;
     let promise = await mysql.query(imageSql);
     let file = await common.getFile(diaryUrl);
