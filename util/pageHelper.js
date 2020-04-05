@@ -68,7 +68,7 @@ async function page(page, count, param, tableName, suffix) {
     }
     if (number > 0) {
         let sql = "select " + param + " from " + tableName + suffix
-            + " limit " + count + " offset " + parseInt(page);
+            + " limit " + count + " offset " + parseInt(page) * count;
         let data = await mysql.query(sql);
         return data;
     }
