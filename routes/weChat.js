@@ -574,7 +574,7 @@ router.get("/getDiaryDetail", async (req, resp) => {
         "FROM\n" +
         "\tfood_diary AS f\n" +
         "\tLEFT JOIN collect c ON f.id = c.diary_id\n" +
-        "\tLEFT JOIN ( SELECT portrait_url, id, nickname FROM customer AS c WHERE c.openid = '" + openid + "' ) AS cus ON 1 = 1\n" +
+        "\tLEFT JOIN customer AS cus ON f.openid = cus.openid\n" +
         "WHERE\n" +
         "\tf.diary_url = '" + diaryUrl + "' \n" +
         "GROUP BY\n" +
