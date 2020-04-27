@@ -57,7 +57,7 @@ async function page(page, count, param, tableName, suffix) {
     let countNum = parseInt(count);
     if (total == 0) {
         number = 0;
-    } else if (countNum > total) {
+    } else if (countNum >= total) {
         number = 1
     } else if (countNum < total) {
         if (total % countNum == 0) {
